@@ -1,0 +1,28 @@
+# Security & URL Rewriting
+RewriteEngine On
+
+# Deny access to sensitive files (Apache 2.4+ syntax)
+<FilesMatch "^(config\.php|install\.sql|\.env|\.git)">
+    Require all denied
+</FilesMatch>
+
+# Deny access to logs directory
+<IfModule mod_rewrite.c>
+    RewriteRule ^logs/ - [F,L]
+</IfModule>
+
+# Prevent directory listing
+Options -Indexes
+
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# PHP settings
+<IfModule mod_php.c>
+    php_value upload_max_filesize 5M
+    php_value post_max_size 10M
+</IfModule>
