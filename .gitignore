@@ -1,0 +1,14 @@
+# Configuration files
+config.php
+
+# Log files
+*-access_log
+*-error_log
+*.log
+logs/
+
+# OS and IDE files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

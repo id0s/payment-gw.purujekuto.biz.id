@@ -1,82 +1,106 @@
-# 💳 RFID Closed-Loop Payment Gateway & Point of Sales (POS)
+# 💳 RFID & QRIS Closed-Loop Payment Gateway
 
-A lightweight, secure, and modern self-hosted closed-loop payment gateway and point-of-sale integration for RFID systems. Features a premium glassmorphic dark theme dashboard, automated online payments, manual admin management, hardware reader integration, and an optional enterprise-grade multi-tenant SaaS architecture.
-
----
-
-## ✨ Features
-
-- 💎 **Premium Glassmorphic Dark UI**: Modern dark theme dashboard with custom radial-gradient animations, responsive layout, dynamic counters, and micro-interactions.
-- 🎨 **Dynamic Branding & White-Labeling**: Customize brand accents and gradients directly from the dashboard settings panel.
-- 💰 **Hybrid Top-Up System**:
-  - **Online Gateway**: Request dynamic QRIS, Virtual Accounts (BCA, Mandiri, BNI, BSI, etc.), or Retail payment links (Alfamart/Indomaret) powered by **WijayaPay API**.
-  - **Manual Administrator Top-up**: Instant balance credit with customized description logs (just restored!).
-- 🤖 **Hardware Integration Ready**: Standardized endpoints for ESP32 or USB RFID card readers (potong saldo / check balance) secured by API token authentication.
-- 🔒 **Enterprise-Grade Security**: Row-level database transactions, SQL injection protection, MD5 signature checks, and transaction auditing logs.
-- 🏬 **Point of Sales (POS) Client**: Connected local shop interface to manage products, scan cards for payment, check stock levels, and print transactions.
+Sistem payment gateway mandiri (*self-hosted*) untuk pembayaran RFID tertutup (*closed-loop*), pengisian saldo (*top-up*), dan integrasi Point of Sale (POS) dengan desain dasbor premium bertema gelap (*glassmorphism dark UI*).
 
 ---
 
-## 🏛️ Deployment Architectures
+## 📌 Alur Integrasi Sistem
 
-You can configure this gateway in one of two configurations:
+Aplikasi ini bertindak sebagai pemroses pusat transaksi (backend payment gateway). Aplikasi ini memproses ketukan (*tap*) kartu RFID dari pembaca fisik (ESP32/NodeMCU), memproses pembayaran QRIS/Virtual Account menggunakan **WijayaPay API**, dan menyimpan data pengguna/saldo.
 
-### 1. Single-Merchant Setup
-Perfect for single stores, schools, canteens, or closed-loop environments.
-- **SQL Script**: `install.sql`
-- **Key Tables**: `users`, `transactions`, `payment_methods`, `topup_requests`, `devices`, `rfid_logs`, `admins`, `settings`, `suppliers`, `products`, `purchase_orders`, `purchase_order_details`, `transaksi`, `transaksi_detail`.
-
-### 2. Multi-Tenant SaaS Setup
-Allows hosting a commercial platform where multiple independent businesses register and operate their own isolated RFID networks.
-- **SQL Script**: `install_saas.sql`
-- **Key Partitioning**: Logic isolated by `tenant_id` on all store-related tables.
-- **Unique Multi-Tenant Constraints**: Allows registering the same physical card UID (e.g. `A1B2C3D4`) on different merchant systems with isolated balances.
-- **Documentation**: See `SAAS_GUIDE.md` for architectural details and subdomain routing.
-
----
-
-## 🚀 Installation & Setup
-
-### 1. Prerequisites
-- PHP 8.0+ (with `PDO` and `cURL` enabled).
-- MySQL / MariaDB Server.
-- Web Server (Apache/Nginx) with rewrite rules enabled (`.htaccess` included).
-
-### 2. Database Import
-Create a database named `rfid_payment` and import the schema script:
-```bash
-# For Single-Merchant:
-mysql -u username -p rfid_payment < install.sql
-
-# For SaaS Platform:
-mysql -u username -p rfid_payment < install_saas.sql
+```mermaid
+flowchart TD
+    Hardware([RFID Reader ESP32]) -->|Kirim UID via API| Gate[Payment Gateway Backend]
+    POSApp[Aplikasi POS Kasir] -->|Kirim Transaksi| Gate
+    CustApp[Katalog Mandiri] -->|Request Bayar QRIS| Gate
+    Gate -->|Proses Saldo / Webhook| DB[(Database MySQL rfid_payment)]
+    Gate -->|Integrasi API| WP[WijayaPay API Gateway]
+    DB -->|Kirim Respon Berhasil| Hardware & POSApp
 ```
 
-### 3. Application Configuration
-Rename/configure values in `config.php`:
+---
+
+## ⚡ Fitur Utama
+
+- **💎 Dasbor Premium Glassmorphic Dark UI**
+  - Tampilan dasbor modern bertema gelap dengan animasi gradasi radial.
+  - Statistik dinamis, grafik tren transaksi, dan antarmuka responsif.
+- **🎨 Branding Dinamis & White-Label**
+  - Ubah nama aplikasi, logo, aksen warna, dan gradasi brand secara dinamis langsung dari pengaturan dasbor admin.
+- **💰 Sistem Top-up Hibrida**
+  - **Online Gateway**: Integrasi **WijayaPay API** untuk membuat QRIS dinamis, Virtual Account (BCA, Mandiri, BNI, BRI, BSI, dll), dan pembayaran retail (Alfamart/Indomaret).
+  - **Manual Administrator**: Top-up saldo secara instan oleh admin dengan pencatatan log keterangan lengkap.
+- **🤖 Integrasi Hardware RFID**
+  - Menyediakan endpoint API aman untuk ESP32/NodeMCU atau USB RFID Reader untuk proses potong saldo (`tap_pay`) dan cek saldo (`tap_check`).
+  - Dilengkapi keamanan otentikasi token API (`X-Api-Token`).
+- **🏬 Arsitektur Fleksibel (Single & Multi-Tenant)**
+  - Mendukung instalasi toko tunggal (*Single-Merchant*) maupun platform multi-bisnis (*Multi-Tenant SaaS*).
+
+---
+
+## 🏛️ Pilihan Arsitektur Deployment
+
+Gateway ini mendukung dua model instalasi database:
+
+1. **Single-Merchant Setup (Default)**
+   - Cocok untuk satu toko, sekolah, kantin, atau lingkungan internal.
+   - **Skrip SQL**: [`install.sql`](file:///mnt/samba-payment-gw/install.sql)
+2. **Multi-Tenant SaaS Setup**
+   - Mengizinkan banyak merchant terpisah mendaftar dan mengelola jaringan RFID mereka sendiri secara terisolasi menggunakan pembagian kolom `tenant_id`.
+   - **Skrip SQL**: [`install_saas.sql`](file:///mnt/samba-payment-gw/install_saas.sql)
+   - **Dokumentasi Detail**: Lihat berkas [`SAAS_GUIDE.md`](file:///mnt/samba-payment-gw/SAAS_GUIDE.md).
+
+---
+
+## 🚀 Panduan Instalasi & Setup
+
+### 1. Kebutuhan Sistem
+- PHP versi 8.0 atau lebih tinggi (ekstensi `PDO` dan `cURL` harus aktif).
+- Server database MySQL / MariaDB.
+- Server Web (Apache / Nginx) dengan modul rewrite aktif (`.htaccess` sudah disertakan).
+
+### 2. Impor Skema Database
+Buat database baru bernama `rfid_payment` di server database Anda, kemudian impor skema yang diinginkan:
+
+```bash
+# Untuk Setup Toko Tunggal (Single-Merchant):
+mysql -u username_db -p rfid_payment < install.sql
+
+# Untuk Setup Multi-Tenant SaaS:
+mysql -u username_db -p rfid_payment < install_saas.sql
+```
+
+### 3. Konfigurasi Aplikasi (`config.php`)
+1. Ubah nama file [`config.example.php`](file:///mnt/samba-payment-gw/config.example.php) menjadi `config.php`.
+2. Buka file `config.php` dan sesuaikan parameter berikut:
 ```php
+// Koneksi Database
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'rfid_payment');
-define('DB_USER', 'your_db_user');
-define('DB_PASS', 'your_db_password');
+define('DB_USER', 'username_database_anda');
+define('DB_PASS', 'password_database_anda');
 
-define('API_TOKEN', 'your-custom-hardware-token');
-define('WIJAYAPAY_MERCHANT_CODE', 'your-merchant-code');
-define('WIJAYAPAY_API_KEY', 'your-api-key');
+// Keamanan API untuk pembaca hardware
+define('API_TOKEN', 'token-keamanan-hardware-anda');
+
+// Kredensial WijayaPay API (Ganti dengan akun merchant Anda)
+define('WIJAYAPAY_MERCHANT_CODE', 'merchant-code-anda');
+define('WIJAYAPAY_API_KEY', 'api-key-anda');
+define('WIJAYAPAY_IS_PRODUCTION', false); // Ubah true jika live
 ```
 
 ---
 
-## 📡 Hardware RFID Reader API (ESP32 / NodeMCU)
+## 📡 Dokumentasi API Hardware RFID (ESP32 / NodeMCU)
 
-Secure your physical readers using the `X-Api-Token` header or `?token=` parameter.
+Untuk menghubungkan hardware RFID Reader ke payment gateway, sertakan header `X-Api-Token` atau parameter query `?token=` dengan nilai `API_TOKEN` yang Anda tentukan di `config.php`.
 
-### 1. Tap to Pay / Deduct Balance
-Send a request when a card is tapped on a scanner:
+### 1. Potong Saldo / Pembayaran RFID Tap
+Kirim permintaan HTTP GET saat kartu RFID ditempelkan ke alat pembaca:
 ```http
-GET /api/rfid.php?action=tap&uid=A1B2C3D4&device=DEV-001&token=your-token
+GET /api/rfid.php?action=tap&uid=A1B2C3D4&device=DEV-001&token=TOKEN_API_ANDA
 ```
-**Response (Success)**:
+**Respon JSON Sukses**:
 ```json
 {
   "status": "success",
@@ -84,37 +108,34 @@ GET /api/rfid.php?action=tap&uid=A1B2C3D4&device=DEV-001&token=your-token
   "nama": "Budi Santoso",
   "jumlah": 10000,
   "sisa_saldo": 40000,
-  "order_id": "TAP-20260616-XXXX"
+  "order_id": "TAP-20260616-A1B2C3D4"
 }
 ```
 
-### 2. Check Card Status & Balance
+### 2. Cek Status Kartu & Saldo
 ```http
-GET /api/rfid.php?action=check&uid=A1B2C3D4&token=your-token
+GET /api/rfid.php?action=check&uid=A1B2C3D4&token=TOKEN_API_ANDA
 ```
 
 ---
 
-## 📦 Database Table Map
+## 🗺️ Peta Tabel Database
 
-| Table | Purpose | Project Scope |
+| Nama Tabel | Fungsi Utama | Cakupan Proyek |
 | :--- | :--- | :--- |
-| `users` | Holds RFID card holders, active statuses, and account balance. | Gateway Core |
-| `transactions` | Auditable log of all platform topups and merchant payments. | Gateway Core |
-| `payment_methods` | Virtual Accounts and e-wallet configurations for transfer. | Gateway Core |
-| `topup_requests` | Stores customer transfer receipts waiting for admin approval. | Gateway Core |
-| `devices` | Registered physical reader terminals (with tap price limits). | Gateway Core |
-| `rfid_logs` | Hardware tap log history for debugging and telemetry. | Gateway Core |
-| `admins` | Platform / Tenant login credential accounts (Superadmin/Admin/Operator roles). | Gateway Core |
-| `settings` | Dynamic key-value store configurations (branding, limits). | Gateway Core |
-| `suppliers` | Direct wholesale inventory providers list. | POS Client / Supply Chain |
-| `products` | Point-Of-Sale inventory items (SKU, stock, cost price, retail price). | POS Client / Inventory |
-| `purchase_orders` | Wholesale incoming restock batch order headers. | POS Client / Supply Chain |
-| `purchase_order_details` | Quantities, items, and cost rates of specific restock orders. | POS Client / Supply Chain |
-| `transaksi` | Store orders metadata (payment methods, RFID UID, totals). | POS Client |
-| `transaksi_detail` | Items inside each POS shopping cart invoice. | POS Client |
+| `users` | Menyimpan data pelanggan, kartu RFID (UID), status kartu, dan saldo. | Core Gateway |
+| `transactions` | Log pencatatan audit transaksi top-up dan pembayaran merchant. | Core Gateway |
+| `payment_methods` | Daftar bank/e-wallet pembayaran yang diaktifkan untuk transfer manual/otomatis. | Core Gateway |
+| `topup_requests` | Pengajuan permintaan top-up manual dari pelanggan (bukti transfer). | Core Gateway |
+| `devices` | Terminal RFID Reader fisik yang didaftarkan ke sistem beserta harga tap default. | Core Gateway |
+| `rfid_logs` | Log aktivitas pembacaan kartu RFID (tap) untuk debugging & telemetri. | Core Gateway |
+| `admins` | Akun pengelola payment gateway (Superadmin / Admin / Operator). | Core Gateway |
+| `settings` | Pengaturan dinamis sistem (Branding warna, nama toko, min/max limit). | Core Gateway |
+| `suppliers` | Daftar pemasok barang dagangan untuk inventory retail. | POS Client |
+| `products` | Daftar inventaris barang retail (SKU, stok, harga beli, harga jual). | POS Client |
+| `transaksi` & `transaksi_detail` | Transaksi struk belanja retail dari POS kasir. | POS Client |
 
 ---
 
-## 📄 License
-This project is open-source and licensed under the MIT License.
+## 📄 Lisensi
+Proyek ini bersifat open-source dan berlisensi di bawah **MIT License**.
