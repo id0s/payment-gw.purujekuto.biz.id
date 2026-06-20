@@ -80,8 +80,10 @@ define('DB_NAME', 'rfid_payment');
 define('DB_USER', 'username_database_anda');
 define('DB_PASS', 'password_database_anda');
 
-// Keamanan API untuk pembaca hardware
-define('API_TOKEN', 'token-keamanan-hardware-anda');
+// Token / Kunci Keamanan API untuk hardware reader. 
+// Diisi bebas dengan kata sandi/kunci acak pilihan Anda (misal: 'KunciRahasiaRFID123!').
+// Kunci ini harus sama dengan token yang dikirimkan oleh hardware RFID (ESP32) di programnya.
+define('API_TOKEN', 'kunci-rahasia-api-pilihan-anda');
 
 // Kredensial WijayaPay API (Ganti dengan akun merchant Anda)
 define('WIJAYAPAY_MERCHANT_CODE', 'merchant-code-anda');
