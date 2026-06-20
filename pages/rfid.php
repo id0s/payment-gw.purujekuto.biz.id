@@ -116,6 +116,16 @@ $users = $stmt->fetchAll();
                             $s = $statusMap[$u['status']] ?? ['badge-default', $u['status']];
                             ?>
                             <span class="badge <?= $s[0] ?>"><?= $s[1] ?></span>
+                            <br>
+                            <?php if ($u['pin'] !== null): ?>
+                                <span class="badge badge-success" title="PIN Aktif" style="margin-top:0.25rem; font-size:0.7rem; display:inline-flex; align-items:center; gap:0.2rem;">
+                                    🔒 Secure
+                                </span>
+                            <?php else: ?>
+                                <span class="badge badge-warning" title="Belum Atur PIN" style="margin-top:0.25rem; font-size:0.7rem; display:inline-flex; align-items:center; gap:0.2rem;">
+                                    🔓 No PIN
+                                </span>
+                            <?php endif; ?>
                         </td>
                         <td>
                             <span style="font-size:0.8rem"><?= $u['total_trx'] ?> trx</span>
@@ -169,6 +179,11 @@ $users = $stmt->fetchAll();
                 <div class="form-group">
                     <label class="form-label">Nama Pemilik *</label>
                     <input type="text" name="nama" class="form-control" placeholder="Nama lengkap" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">PIN Kartu (6 Digit Angka)</label>
+                    <input type="password" name="pin" class="form-control" placeholder="Masukkan 6 digit angka PIN keamanan" maxlength="6" pattern="[0-9]{6}" inputmode="numeric">
+                    <small class="text-muted">Opsional. Masukkan 6 digit angka untuk keamanan transaksi tap kartu.</small>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -309,6 +324,11 @@ $users = $stmt->fetchAll();
                     <label class="form-label">Nama Pemilik *</label>
                     <input type="text" name="nama" id="edit-nama" class="form-control" required>
                 </div>
+                <div class="form-group">
+                    <label class="form-label">Ubah PIN Kartu (6 Digit Angka)</label>
+                    <input type="password" name="pin" id="edit-pin" class="form-control" placeholder="Kosongkan jika tidak ingin mengubah PIN" maxlength="6" pattern="[0-9]{6}" inputmode="numeric">
+                    <small class="text-muted">Masukkan 6 digit angka baru jika ingin memperbarui PIN kartu saat ini.</small>
+                </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Email</label>
@@ -387,6 +407,7 @@ function showEditModal(user) {
     document.getElementById('edit-nama').value = user.nama;
     document.getElementById('edit-email').value = user.email || '';
     document.getElementById('edit-telepon').value = user.telepon || '';
+    document.getElementById('edit-pin').value = '';
     App.openModal('modal-edit');
 }
 

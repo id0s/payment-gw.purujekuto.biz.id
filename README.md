@@ -91,15 +91,20 @@ define('WIJAYAPAY_IS_PRODUCTION', false); // Ubah true jika live
 
 ---
 
-## 📡 Dokumentasi API Hardware RFID (ESP32 / NodeMCU)
+## 📡 Dokumentasi API Hardware RFID & Keamanan PIN
+
+Untuk meningkatkan aspek keamanan, sistem ini dilengkapi fitur **Validasi PIN 6 Digit**. Setiap kartu dapat diatur PIN-nya via Panel Admin (`pages/rfid.php`). 
+- Jika kartu **memiliki PIN aktif**, setiap pembayaran/transaksi *wajib* menyertakan parameter `pin`.
+- Jika kartu **belum memiliki PIN**, transaksi dapat dilakukan langsung (disarankan segera mengatur PIN demi keamanan).
 
 Untuk menghubungkan hardware RFID Reader ke payment gateway, sertakan header `X-Api-Token` atau parameter query `?token=` dengan nilai `API_TOKEN` yang Anda tentukan di `config.php`.
 
 ### 1. Potong Saldo / Pembayaran RFID Tap
-Kirim permintaan HTTP GET saat kartu RFID ditempelkan ke alat pembaca:
+Kirim permintaan HTTP GET/POST saat kartu RFID ditempelkan ke alat pembaca:
 ```http
-GET /api/rfid.php?action=tap&uid=A1B2C3D4&device=DEV-001&token=TOKEN_API_ANDA
+GET /api/rfid.php?action=tap&uid=A1B2C3D4&device=DEV-001&token=TOKEN_API_ANDA&pin=123456
 ```
+
 **Respon JSON Sukses**:
 ```json
 {
@@ -107,14 +112,40 @@ GET /api/rfid.php?action=tap&uid=A1B2C3D4&device=DEV-001&token=TOKEN_API_ANDA
   "message": "Pembayaran berhasil",
   "nama": "Budi Santoso",
   "jumlah": 10000,
-  "sisa_saldo": 40000,
-  "order_id": "TAP-20260616-A1B2C3D4"
+  "sisa_saldo": 36000,
+  "order_id": "TAP-20260620-9948C55B"
+}
+```
+
+**Respon JSON Error (PIN Salah - HTTP 401)**:
+```json
+{
+  "status": "error",
+  "message": "PIN salah"
+}
+```
+
+**Respon JSON Error (PIN Wajib Diisi tetapi Kosong - HTTP 400)**:
+```json
+{
+  "status": "error",
+  "message": "PIN dibutuhkan",
+  "pin_required": true
 }
 ```
 
 ### 2. Cek Status Kartu & Saldo
 ```http
 GET /api/rfid.php?action=check&uid=A1B2C3D4&token=TOKEN_API_ANDA
+```
+**Respon JSON**:
+```json
+{
+  "status": "success",
+  "nama": "Budi Santoso",
+  "saldo": 51000,
+  "kartu_status": "active"
+}
 ```
 
 ---

@@ -47,7 +47,7 @@ switch ($action) {
             $pdo->beginTransaction();
 
             // Cari user berdasarkan UID
-            $stmt = $pdo->prepare("SELECT id, nama, saldo, status FROM users WHERE rfid_uid = ? FOR UPDATE");
+            $stmt = $pdo->prepare("SELECT id, nama, saldo, status, pin FROM users WHERE rfid_uid = ? FOR UPDATE");
             $stmt->execute([$uid]);
             $user = $stmt->fetch();
 
@@ -62,6 +62,21 @@ switch ($action) {
             if ($user['status'] !== 'active') {
                 $pdo->rollBack();
                 jsonResponse(['status' => 'error', 'message' => 'Kartu diblokir', 'uid' => $uid], 403);
+            }
+
+            // Validasi PIN jika kartu memiliki PIN
+            $pin = $_GET['pin'] ?? $_POST['pin'] ?? '';
+            if ($user['pin'] !== null) {
+                if (empty($pin)) {
+                    $pdo->rollBack();
+                    jsonResponse(['status' => 'error', 'message' => 'PIN dibutuhkan', 'pin_required' => true], 400);
+                }
+                if (!password_verify($pin, $user['pin'])) {
+                    $pdo->rollBack();
+                    $pdo->prepare("INSERT INTO rfid_logs (rfid_uid, aksi, device_id, result, detail) VALUES (?, 'tap_pay', ?, 'failed_pin', 'PIN salah')")
+                        ->execute([$uid, $deviceId]);
+                    jsonResponse(['status' => 'error', 'message' => 'PIN salah'], 401);
+                }
             }
 
             // Ambil harga tap dari device atau default
@@ -169,13 +184,16 @@ switch ($action) {
             jsonResponse(['status' => 'error', 'message' => 'UID sudah terdaftar'], 409);
         }
 
-        $pdo->prepare("INSERT INTO users (rfid_uid, nama, email, telepon) VALUES (?, ?, ?, ?)")
-            ->execute([$uid, $nama, $email ?: null, $telepon ?: null]);
+        $pin = trim($_POST['pin'] ?? '');
+        $hashedPin = !empty($pin) ? password_hash($pin, PASSWORD_DEFAULT) : null;
+
+        $pdo->prepare("INSERT INTO users (rfid_uid, nama, email, telepon, pin) VALUES (?, ?, ?, ?, ?)")
+            ->execute([$uid, $nama, $email ?: null, $telepon ?: null, $hashedPin]);
 
         $pdo->prepare("INSERT INTO rfid_logs (rfid_uid, aksi, result, detail) VALUES (?, 'register', 'success', ?)")
-            ->execute([$uid, "Didaftarkan oleh admin"]);
+            ->execute([$uid, "Didaftarkan oleh admin" . (!empty($pin) ? " dengan PIN" : "")]);
 
-        logActivity("Kartu RFID '$uid' didaftarkan untuk '$nama'");
+        logActivity("Kartu RFID '$uid' didaftarkan untuk '$nama'" . (!empty($pin) ? " (PIN aktif)" : ""));
         jsonResponse(['status' => 'success', 'message' => "Kartu $uid berhasil didaftarkan untuk $nama"]);
         break;
 
@@ -193,10 +211,18 @@ switch ($action) {
             jsonResponse(['status' => 'error', 'message' => 'Data tidak lengkap'], 400);
         }
 
-        $pdo->prepare("UPDATE users SET nama = ?, email = ?, telepon = ? WHERE id = ?")
-            ->execute([$nama, $email ?: null, $telepon ?: null, $id]);
+        $pin = trim($_POST['pin'] ?? '');
+        if (!empty($pin)) {
+            $hashedPin = password_hash($pin, PASSWORD_DEFAULT);
+            $pdo->prepare("UPDATE users SET nama = ?, email = ?, telepon = ?, pin = ? WHERE id = ?")
+                ->execute([$nama, $email ?: null, $telepon ?: null, $hashedPin, $id]);
+            logActivity("Data kartu ID $id diupdate (PIN diubah)");
+        } else {
+            $pdo->prepare("UPDATE users SET nama = ?, email = ?, telepon = ? WHERE id = ?")
+                ->execute([$nama, $email ?: null, $telepon ?: null, $id]);
+            logActivity("Data kartu ID $id diupdate");
+        }
 
-        logActivity("Data kartu ID $id diupdate");
         jsonResponse(['status' => 'success', 'message' => 'Data berhasil diupdate']);
         break;
 
